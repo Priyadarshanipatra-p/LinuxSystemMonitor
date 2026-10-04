@@ -390,37 +390,43 @@ void UI::start(
 
         mvprintw(
             processHeaderRow,
-            11,
+            10,
             "PPID"
         );
 
         mvprintw(
             processHeaderRow,
-            20,
+            19,
             "USER"
         );
 
         mvprintw(
             processHeaderRow,
-            31,
+            30,
             "PROCESS"
         );
 
         mvprintw(
             processHeaderRow,
-            53,
+            52,
             "STATE"
         );
 
         mvprintw(
             processHeaderRow,
-            66,
-            "CPU %%"
+            65,
+            "THREADS"
         );
 
         mvprintw(
             processHeaderRow,
-            79,
+            75,
+            "CPU %"
+        );
+
+        mvprintw(
+            processHeaderRow,
+            84,
             "MEMORY MB"
         );
 
@@ -463,48 +469,55 @@ void UI::start(
             mvprintw(
                 row,
                 2,
-                "%-7d",
+                "%-6d",
                 process.getPID()
             );
 
             mvprintw(
                 row,
-                11,
+                10,
                 "%-7d",
                 process.getParentPID()
             );
 
             mvprintw(
                 row,
-                20,
+                19,
                 "%-10.10s",
                 process.getUsername().c_str()
             );
 
             mvprintw(
                 row,
-                31,
+                30,
                 "%-20.20s",
                 process.getName().c_str()
             );
 
             mvprintw(
                 row,
-                53,
+                52,
                 "%-12.12s",
                 process.getState().c_str()
             );
 
             mvprintw(
                 row,
-                66,
-                "%8.2f",
+                65,
+                "%7d",
+                process.getThreadCount()
+            );
+
+            mvprintw(
+                row,
+                75,
+                "%7.2f",
                 process.getCPUUsage()
             );
 
             mvprintw(
                 row,
-                79,
+                84,
                 "%10.2f",
                 process.getMemoryUsage()
             );

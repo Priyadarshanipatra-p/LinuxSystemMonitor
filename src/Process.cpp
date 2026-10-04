@@ -3,6 +3,7 @@
 Process::Process(
     int pid,
     int parentPID,
+    int threadCount,
     const std::string& username,
     const std::string& name,
     const std::string& state,
@@ -11,6 +12,7 @@ Process::Process(
 )
     : pid(pid),
       parentPID(parentPID),
+      threadCount(threadCount),
       username(username),
       name(name),
       state(state),
@@ -24,6 +26,10 @@ int Process::getPID() const {
 
 int Process::getParentPID() const {
     return parentPID;
+}
+
+int Process::getThreadCount() const {
+    return threadCount;
 }
 
 std::string Process::getUsername() const {

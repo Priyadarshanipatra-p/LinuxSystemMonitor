@@ -7,9 +7,12 @@ class Process {
 private:
     int pid;
     int parentPID;
+    int threadCount;
+
     std::string username;
     std::string name;
     std::string state;
+
     double memoryUsage;
     double cpuUsage;
 
@@ -17,6 +20,7 @@ public:
     Process(
         int pid,
         int parentPID,
+        int threadCount,
         const std::string& username,
         const std::string& name,
         const std::string& state,
@@ -27,6 +31,8 @@ public:
     int getPID() const;
 
     int getParentPID() const;
+
+    int getThreadCount() const;
 
     std::string getUsername() const;
 
@@ -40,4 +46,3 @@ public:
 };
 
 #endif
-

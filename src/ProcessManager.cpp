@@ -13,9 +13,12 @@ namespace fs = std::filesystem;
 struct ProcessData {
     int pid;
     int parentPID;
+    int threadCount;
+
     std::string username;
     std::string name;
     std::string state;
+
     long memoryKB;
     long long cpuTime;
 };
@@ -113,9 +116,12 @@ static ProcessData readProcess(int pid) {
 
     data.pid = pid;
     data.parentPID = 0;
+    data.threadCount = 0;
+
     data.username = "Unknown";
     data.name = "Unknown";
     data.state = "Unknown";
+
     data.memoryKB = 0;
     data.cpuTime = 0;
 
@@ -169,6 +175,16 @@ static ProcessData readProcess(int pid) {
             iss >> key
                 >> data.memoryKB
                 >> unit;
+        }
+
+        if (line.rfind("Threads:", 0) == 0) {
+
+            std::istringstream iss(line);
+
+            std::string key;
+
+            iss >> key
+                >> data.threadCount;
         }
     }
 
@@ -369,6 +385,7 @@ std::vector<Process> ProcessManager::getProcesses() {
         processes.emplace_back(
             data.pid,
             data.parentPID,
+            data.threadCount,
             data.username,
             data.name,
             data.state,
