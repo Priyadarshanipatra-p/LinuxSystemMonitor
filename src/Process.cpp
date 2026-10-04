@@ -2,12 +2,14 @@
 
 Process::Process(
     int pid,
+    const std::string& username,
     const std::string& name,
     const std::string& state,
     double memoryUsage,
     double cpuUsage
 )
     : pid(pid),
+      username(username),
       name(name),
       state(state),
       memoryUsage(memoryUsage),
@@ -16,6 +18,10 @@ Process::Process(
 
 int Process::getPID() const {
     return pid;
+}
+
+std::string Process::getUsername() const {
+    return username;
 }
 
 std::string Process::getName() const {

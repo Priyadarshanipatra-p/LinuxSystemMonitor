@@ -3,15 +3,16 @@
 #include <algorithm>
 #include <filesystem>
 #include <fstream>
+#include <pwd.h>
 #include <sstream>
 #include <string>
 #include <unordered_map>
-#include <unistd.h>
 
 namespace fs = std::filesystem;
 
 struct ProcessData {
     int pid;
+    std::string username;
     std::string name;
     std::string state;
     long memoryKB;
@@ -56,6 +57,19 @@ static long long getTotalCPUTime() {
            iowait + irq + softirq + steal;
 }
 
+static std::string getUsernameFromUID(
+    unsigned int uid) {
+
+    struct passwd* passwordEntry =
+        getpwuid(uid);
+
+    if (passwordEntry != nullptr) {
+        return passwordEntry->pw_name;
+    }
+
+    return "Unknown";
+}
+
 static std::string convertProcessState(
     const std::string& stateCode) {
 
@@ -97,6 +111,7 @@ static ProcessData readProcess(int pid) {
     ProcessData data;
 
     data.pid = pid;
+    data.username = "Unknown";
     data.name = "Unknown";
     data.state = "Unknown";
     data.memoryKB = 0;
@@ -127,6 +142,19 @@ static ProcessData readProcess(int pid) {
                 data.name =
                     data.name.substr(first);
             }
+        }
+
+        if (line.rfind("Uid:", 0) == 0) {
+
+            std::istringstream iss(line);
+
+            std::string key;
+            unsigned int uid = 0;
+
+            iss >> key >> uid;
+
+            data.username =
+                getUsernameFromUID(uid);
         }
 
         if (line.rfind("VmRSS:", 0) == 0) {
@@ -172,12 +200,10 @@ static ProcessData readProcess(int pid) {
              * After the process name:
              *
              * Field 3  = state
-             * Field 4  = ppid
-             * ...
              * Field 14 = utime
              * Field 15 = stime
              *
-             * Because we start after the process name,
+             * Because we start after field 2,
              * state is item 1,
              * utime is item 12,
              * stime is item 13.
@@ -230,17 +256,9 @@ std::vector<Process> ProcessManager::getProcesses() {
 
     std::vector<Process> processes;
 
-    /*
-     * Store previous CPU time for each process.
-     *
-     * PID -> previous process CPU time
-     */
     static std::unordered_map<int, long long>
         previousProcessTimes;
 
-    /*
-     * Store previous total CPU time.
-     */
     static long long previousTotalCPU = 0;
 
     long long currentTotalCPU =
@@ -250,16 +268,9 @@ std::vector<Process> ProcessManager::getProcesses() {
         return processes;
     }
 
-    /*
-     * Difference in total CPU time since
-     * the previous refresh.
-     */
     long long totalCPUDifference =
         currentTotalCPU - previousTotalCPU;
 
-    /*
-     * First call establishes the baseline.
-     */
     bool firstReading =
         previousTotalCPU == 0;
 
@@ -273,9 +284,6 @@ std::vector<Process> ProcessManager::getProcesses() {
         std::string directoryName =
             entry.path().filename().string();
 
-        /*
-         * Only numeric directories are process IDs.
-         */
         if (directoryName.empty() ||
             directoryName.find_first_not_of("0123456789")
                 != std::string::npos) {
@@ -300,10 +308,6 @@ std::vector<Process> ProcessManager::getProcesses() {
 
         double cpuUsage = 0.0;
 
-        /*
-         * Calculate CPU usage from the change
-         * in process CPU time.
-         */
         if (!firstReading &&
             totalCPUDifference > 0) {
 
@@ -334,10 +338,6 @@ std::vector<Process> ProcessManager::getProcesses() {
             }
         }
 
-        /*
-         * Keep CPU percentage within
-         * a sensible range.
-         */
         if (cpuUsage < 0.0) {
             cpuUsage = 0.0;
         }
@@ -353,23 +353,17 @@ std::vector<Process> ProcessManager::getProcesses() {
 
         processes.emplace_back(
             data.pid,
+            data.username,
             data.name,
             data.state,
             memoryMB,
             cpuUsage
         );
 
-        /*
-         * Save current process CPU time
-         * for the next refresh.
-         */
         previousProcessTimes[pid] =
             data.cpuTime;
     }
 
-    /*
-     * Save current total CPU time.
-     */
     previousTotalCPU =
         currentTotalCPU;
 
@@ -405,4 +399,3 @@ void ProcessManager::sortByMemory(
         }
     );
 }
-

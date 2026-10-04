@@ -391,24 +391,30 @@ void UI::start(
         mvprintw(
             processHeaderRow,
             12,
+            "USER"
+        );
+
+        mvprintw(
+            processHeaderRow,
+            23,
             "PROCESS"
         );
 
         mvprintw(
             processHeaderRow,
-            35,
+            45,
             "STATE"
         );
 
         mvprintw(
             processHeaderRow,
-            48,
+            58,
             "CPU %%"
         );
 
         mvprintw(
             processHeaderRow,
-            61,
+            71,
             "MEMORY MB"
         );
 
@@ -458,27 +464,34 @@ void UI::start(
             mvprintw(
                 row,
                 12,
+                "%-10.10s",
+                process.getUsername().c_str()
+            );
+
+            mvprintw(
+                row,
+                23,
                 "%-20.20s",
                 process.getName().c_str()
             );
 
             mvprintw(
                 row,
-                35,
+                45,
                 "%-12.12s",
                 process.getState().c_str()
             );
 
             mvprintw(
                 row,
-                48,
+                58,
                 "%8.2f",
                 process.getCPUUsage()
             );
 
             mvprintw(
                 row,
-                61,
+                71,
                 "%10.2f",
                 process.getMemoryUsage()
             );
