@@ -12,6 +12,7 @@ namespace fs = std::filesystem;
 
 struct ProcessData {
     int pid;
+    int parentPID;
     std::string username;
     std::string name;
     std::string state;
@@ -111,6 +112,7 @@ static ProcessData readProcess(int pid) {
     ProcessData data;
 
     data.pid = pid;
+    data.parentPID = 0;
     data.username = "Unknown";
     data.name = "Unknown";
     data.state = "Unknown";
@@ -200,11 +202,13 @@ static ProcessData readProcess(int pid) {
              * After the process name:
              *
              * Field 3  = state
+             * Field 4  = parent PID
              * Field 14 = utime
              * Field 15 = stime
              *
-             * Because we start after field 2,
+             * Because we start after field 2:
              * state is item 1,
+             * parent PID is item 2,
              * utime is item 12,
              * stime is item 13.
              */
@@ -219,6 +223,17 @@ static ProcessData readProcess(int pid) {
 
                     data.state =
                         convertProcessState(field);
+                }
+
+                if (i == 2) {
+
+                    try {
+                        data.parentPID =
+                            std::stoi(field);
+                    }
+                    catch (...) {
+                        data.parentPID = 0;
+                    }
                 }
 
                 if (i == 12) {
@@ -353,6 +368,7 @@ std::vector<Process> ProcessManager::getProcesses() {
 
         processes.emplace_back(
             data.pid,
+            data.parentPID,
             data.username,
             data.name,
             data.state,

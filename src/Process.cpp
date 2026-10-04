@@ -2,6 +2,7 @@
 
 Process::Process(
     int pid,
+    int parentPID,
     const std::string& username,
     const std::string& name,
     const std::string& state,
@@ -9,6 +10,7 @@ Process::Process(
     double cpuUsage
 )
     : pid(pid),
+      parentPID(parentPID),
       username(username),
       name(name),
       state(state),
@@ -18,6 +20,10 @@ Process::Process(
 
 int Process::getPID() const {
     return pid;
+}
+
+int Process::getParentPID() const {
+    return parentPID;
 }
 
 std::string Process::getUsername() const {

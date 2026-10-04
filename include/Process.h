@@ -6,6 +6,7 @@
 class Process {
 private:
     int pid;
+    int parentPID;
     std::string username;
     std::string name;
     std::string state;
@@ -15,6 +16,7 @@ private:
 public:
     Process(
         int pid,
+        int parentPID,
         const std::string& username,
         const std::string& name,
         const std::string& state,
@@ -23,6 +25,8 @@ public:
     );
 
     int getPID() const;
+
+    int getParentPID() const;
 
     std::string getUsername() const;
 
