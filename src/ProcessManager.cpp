@@ -31,6 +31,7 @@ static long long getTotalCPUTime() {
     std::istringstream ss(line);
 
     std::string cpu;
+
     long long user = 0;
     long long nice = 0;
     long long system = 0;
@@ -63,10 +64,10 @@ static ProcessData readProcess(int pid) {
     data.memoryKB = 0;
     data.cpuTime = 0;
 
-    std::string path =
+    std::string statusPath =
         "/proc/" + std::to_string(pid) + "/status";
 
-    std::ifstream statusFile(path);
+    std::ifstream statusFile(statusPath);
 
     if (!statusFile.is_open()) {
         return data;
@@ -84,7 +85,8 @@ static ProcessData readProcess(int pid) {
                 data.name.find_first_not_of(" \t");
 
             if (first != std::string::npos) {
-                data.name = data.name.substr(first);
+                data.name =
+                    data.name.substr(first);
             }
         }
 
@@ -100,13 +102,6 @@ static ProcessData readProcess(int pid) {
                 >> unit;
         }
     }
-
-    /*
-       /proc/[PID]/stat
-
-       Field 14 = user CPU time
-       Field 15 = system CPU time
-    */
 
     std::string statPath =
         "/proc/" + std::to_string(pid) + "/stat";
@@ -131,28 +126,36 @@ static ProcessData readProcess(int pid) {
 
             std::string field;
 
-            /*
-               After removing PID and process name,
-               field 3 becomes the state.
-
-               Therefore:
-               field 14 → position 12 here
-               field 15 → position 13 here
-            */
-
             long long userTime = 0;
             long long systemTime = 0;
 
+            /*
+             * After the process name:
+             *
+             * Field 1  = state
+             * Field 2  = ppid
+             * ...
+             * Field 13 = utime
+             * Field 14 = stime
+             *
+             * Because we start after the process name,
+             * utime is item 12 and stime is item 13.
+             */
+
             for (int i = 1; i <= 13; i++) {
 
-                iss >> field;
+                if (!(iss >> field)) {
+                    break;
+                }
 
                 if (i == 12) {
-                    userTime = std::stoll(field);
+                    userTime =
+                        std::stoll(field);
                 }
 
                 if (i == 13) {
-                    systemTime = std::stoll(field);
+                    systemTime =
+                        std::stoll(field);
                 }
             }
 
@@ -168,12 +171,38 @@ std::vector<Process> ProcessManager::getProcesses() {
 
     std::vector<Process> processes;
 
-    long long totalCPU =
+    /*
+     * Store previous CPU time for each process.
+     *
+     * PID -> previous process CPU time
+     */
+    static std::unordered_map<int, long long>
+        previousProcessTimes;
+
+    /*
+     * Store previous total CPU time.
+     */
+    static long long previousTotalCPU = 0;
+
+    long long currentTotalCPU =
         getTotalCPUTime();
 
-    if (totalCPU == 0) {
+    if (currentTotalCPU == 0) {
         return processes;
     }
+
+    /*
+     * Difference in total CPU time since
+     * the previous refresh.
+     */
+    long long totalCPUDifference =
+        currentTotalCPU - previousTotalCPU;
+
+    /*
+     * First call establishes the baseline.
+     */
+    bool firstReading =
+        previousTotalCPU == 0;
 
     for (const auto& entry :
          fs::directory_iterator("/proc")) {
@@ -185,6 +214,9 @@ std::vector<Process> ProcessManager::getProcesses() {
         std::string directoryName =
             entry.path().filename().string();
 
+        /*
+         * Only numeric directories are process IDs.
+         */
         if (directoryName.empty() ||
             directoryName.find_first_not_of("0123456789")
                 != std::string::npos) {
@@ -195,7 +227,8 @@ std::vector<Process> ProcessManager::getProcesses() {
         int pid;
 
         try {
-            pid = std::stoi(directoryName);
+            pid =
+                std::stoi(directoryName);
         }
         catch (...) {
             continue;
@@ -204,12 +237,53 @@ std::vector<Process> ProcessManager::getProcesses() {
         ProcessData data =
             readProcess(pid);
 
-        double cpuUsage =
-            (static_cast<double>(data.cpuTime)
-             / totalCPU) * 100.0;
+        double cpuUsage = 0.0;
+
+        /*
+         * Calculate CPU usage from the change
+         * in process CPU time.
+         */
+        if (!firstReading &&
+            totalCPUDifference > 0) {
+
+            auto previous =
+                previousProcessTimes.find(pid);
+
+            if (previous !=
+                previousProcessTimes.end()) {
+
+                long long processDifference =
+                    data.cpuTime -
+                    previous->second;
+
+                if (processDifference >= 0) {
+
+                    cpuUsage =
+                        (static_cast<double>(
+                            processDifference)
+                         /
+                         static_cast<double>(
+                            totalCPUDifference))
+                        * 100.0;
+                }
+            }
+        }
+
+        /*
+         * Keep CPU percentage within
+         * a sensible range.
+         */
+        if (cpuUsage < 0.0) {
+            cpuUsage = 0.0;
+        }
+
+        if (cpuUsage > 100.0) {
+            cpuUsage = 100.0;
+        }
 
         double memoryMB =
-            static_cast<double>(data.memoryKB)
+            static_cast<double>(
+                data.memoryKB)
             / 1024.0;
 
         processes.emplace_back(
@@ -218,7 +292,20 @@ std::vector<Process> ProcessManager::getProcesses() {
             memoryMB,
             cpuUsage
         );
+
+        /*
+         * Save current process CPU time
+         * for the next refresh.
+         */
+        previousProcessTimes[pid] =
+            data.cpuTime;
     }
+
+    /*
+     * Save current total CPU time.
+     */
+    previousTotalCPU =
+        currentTotalCPU;
 
     return processes;
 }
@@ -229,7 +316,8 @@ void ProcessManager::sortByCPU(
     std::sort(
         processes.begin(),
         processes.end(),
-        [](const Process& a, const Process& b) {
+        [](const Process& a,
+           const Process& b) {
 
             return a.getCPUUsage()
                    > b.getCPUUsage();
@@ -243,7 +331,8 @@ void ProcessManager::sortByMemory(
     std::sort(
         processes.begin(),
         processes.end(),
-        [](const Process& a, const Process& b) {
+        [](const Process& a,
+           const Process& b) {
 
             return a.getMemoryUsage()
                    > b.getMemoryUsage();
