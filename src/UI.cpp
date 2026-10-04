@@ -73,6 +73,9 @@ void UI::start(
         std::string kernelMemory =
             system.getKernelResourceInfo();
 
+        /*
+         * Application title.
+         */
         attron(COLOR_PAIR(1) | A_BOLD);
 
         mvprintw(
@@ -84,7 +87,7 @@ void UI::start(
         attroff(COLOR_PAIR(1) | A_BOLD);
 
         /*
-         * CPU and Memory status
+         * CPU and Memory status.
          */
         const char* cpuStatus =
             cpu >= 80.0 ? "[HIGH]" : "[OK]";
@@ -215,6 +218,14 @@ void UI::start(
 
         /*
          * Linux Kernel Driver information.
+         *
+         * The kernel module provides:
+         * Total RAM
+         * Free RAM
+         * CPU Usage
+         * Total Processes
+         * Running Processes
+         * Sleeping Processes
          */
         attron(COLOR_PAIR(1) | A_BOLD);
 
@@ -231,9 +242,23 @@ void UI::start(
         std::istringstream kernelStream(kernelMemory);
         std::string kernelLine;
 
+        /*
+         * Display all kernel driver lines.
+         *
+         * The driver currently returns 8 lines:
+         *
+         * 1. Header
+         * 2. Separator
+         * 3. Total RAM
+         * 4. Free RAM
+         * 5. CPU Usage
+         * 6. Total Processes
+         * 7. Running Processes
+         * 8. Sleeping Processes
+         */
         while (std::getline(kernelStream, kernelLine)) {
 
-            if (kernelRow >= 9) {
+            if (kernelRow >= 15) {
                 break;
             }
 
@@ -253,25 +278,25 @@ void UI::start(
         attron(A_BOLD);
 
         mvprintw(
-            10,
+            16,
             2,
             "PID"
         );
 
         mvprintw(
-            10,
+            16,
             12,
             "PROCESS"
         );
 
         mvprintw(
-            10,
+            16,
             35,
             "CPU %%"
         );
 
         mvprintw(
-            10,
+            16,
             48,
             "MEMORY MB"
         );
@@ -281,17 +306,17 @@ void UI::start(
         if (width > 5) {
 
             mvhline(
-                11,
+                17,
                 2,
                 '-',
                 width - 4
             );
         }
 
-        int row = 12;
+        int row = 18;
 
         int maxProcesses =
-            height - 17;
+            height - 23;
 
         int count = 0;
 

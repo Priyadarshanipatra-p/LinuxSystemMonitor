@@ -6,11 +6,12 @@
 #include <linux/mm.h>
 #include <linux/sysinfo.h>
 #include <linux/kernel_stat.h>
+#include <linux/sched/signal.h>
 
 MODULE_LICENSE("GPL");
 MODULE_AUTHOR("Priyadarshani Patra");
 MODULE_DESCRIPTION("Linux System Monitor kernel module");
-MODULE_VERSION("1.1");
+MODULE_VERSION("1.2");
 
 #define PROC_NAME "resource_monitor"
 
@@ -35,6 +36,15 @@ static int resource_monitor_show(struct seq_file *m, void *v)
     unsigned long total_cpu;
     unsigned long busy_cpu;
 
+    unsigned long total_processes = 0;
+    unsigned long running_processes = 0;
+    unsigned long sleeping_processes = 0;
+
+    struct task_struct *task;
+
+    /*
+     * Get RAM information from the Linux kernel.
+     */
     si_meminfo(&info);
 
     total_ram =
@@ -46,14 +56,29 @@ static int resource_monitor_show(struct seq_file *m, void *v)
     /*
      * Read CPU time counters from the Linux kernel.
      */
-    user = kcpustat_cpu(0).cpustat[CPUTIME_USER];
-    nice = kcpustat_cpu(0).cpustat[CPUTIME_NICE];
-    system = kcpustat_cpu(0).cpustat[CPUTIME_SYSTEM];
-    idle = kcpustat_cpu(0).cpustat[CPUTIME_IDLE];
-    iowait = kcpustat_cpu(0).cpustat[CPUTIME_IOWAIT];
-    irq = kcpustat_cpu(0).cpustat[CPUTIME_IRQ];
-    softirq = kcpustat_cpu(0).cpustat[CPUTIME_SOFTIRQ];
-    steal = kcpustat_cpu(0).cpustat[CPUTIME_STEAL];
+    user =
+        kcpustat_cpu(0).cpustat[CPUTIME_USER];
+
+    nice =
+        kcpustat_cpu(0).cpustat[CPUTIME_NICE];
+
+    system =
+        kcpustat_cpu(0).cpustat[CPUTIME_SYSTEM];
+
+    idle =
+        kcpustat_cpu(0).cpustat[CPUTIME_IDLE];
+
+    iowait =
+        kcpustat_cpu(0).cpustat[CPUTIME_IOWAIT];
+
+    irq =
+        kcpustat_cpu(0).cpustat[CPUTIME_IRQ];
+
+    softirq =
+        kcpustat_cpu(0).cpustat[CPUTIME_SOFTIRQ];
+
+    steal =
+        kcpustat_cpu(0).cpustat[CPUTIME_STEAL];
 
     total_cpu =
         user +
@@ -68,6 +93,30 @@ static int resource_monitor_show(struct seq_file *m, void *v)
     busy_cpu =
         total_cpu - idle - iowait;
 
+    /*
+     * Walk through the Linux process list.
+     *
+     * for_each_process() is provided by the kernel
+     * scheduler/process management subsystem.
+     */
+    for_each_process(task) {
+
+        total_processes++;
+
+        if (task->__state == TASK_RUNNING) {
+
+            running_processes++;
+        }
+        else if (task->__state == TASK_INTERRUPTIBLE ||
+                 task->__state == TASK_UNINTERRUPTIBLE) {
+
+            sleeping_processes++;
+        }
+    }
+
+    /*
+     * Header.
+     */
     seq_printf(
         m,
         "Linux System Monitor Kernel Module\n"
@@ -78,6 +127,9 @@ static int resource_monitor_show(struct seq_file *m, void *v)
         "=================================\n"
     );
 
+    /*
+     * RAM information.
+     */
     seq_printf(
         m,
         "Total RAM: %lu KB\n",
@@ -90,6 +142,9 @@ static int resource_monitor_show(struct seq_file *m, void *v)
         free_ram
     );
 
+    /*
+     * CPU information.
+     */
     if (total_cpu > 0) {
 
         seq_printf(
@@ -105,6 +160,27 @@ static int resource_monitor_show(struct seq_file *m, void *v)
             "CPU Usage: 0%%\n"
         );
     }
+
+    /*
+     * Process information.
+     */
+    seq_printf(
+        m,
+        "Total Processes: %lu\n",
+        total_processes
+    );
+
+    seq_printf(
+        m,
+        "Running Processes: %lu\n",
+        running_processes
+    );
+
+    seq_printf(
+        m,
+        "Sleeping Processes: %lu\n",
+        sleeping_processes
+    );
 
     return 0;
 }
