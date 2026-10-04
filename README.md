@@ -1,20 +1,22 @@
 # Linux System Monitor
 
-A terminal-based Linux system monitoring tool developed using **C++17**, Linux system interfaces, and **ncurses**.
+A terminal-based Linux system monitoring tool developed using **C++17**, **Linux System Programming**, **Linux Kernel Modules**, **C**, and **ncurses**.
 
-The project monitors CPU, memory, disk, network activity, and running processes through Linux system information and provides an interactive terminal interface.
+The application monitors CPU, memory, disk, network activity, and running processes. It also integrates a custom Linux kernel module that exposes kernel-level resource information through the `/proc` filesystem.
 
 ---
 
 ## Features
 
+### User-Space Monitoring
+
 - Real-time CPU usage monitoring
 - Real-time memory usage monitoring
 - Disk usage monitoring
-- Real-time network download speed
-- Real-time network upload speed
+- Network download speed monitoring
+- Network upload speed monitoring
 - Running process detection
-- Real-time process CPU usage
+- Process CPU usage
 - Process memory usage
 - Sort processes by CPU usage
 - Sort processes by memory usage
@@ -24,45 +26,20 @@ The project monitors CPU, memory, disk, network activity, and running processes 
 - Manual process refresh
 - Keyboard-based controls
 
----
+### Kernel-Space Monitoring
 
-## Technologies Used
+A custom Linux kernel module named `resource_monitor` is included in the project.
 
-- **C++17**
-- **Linux**
-- **Linux `/proc` filesystem**
-- **ncurses**
-- **STL**
-- **C++17 filesystem**
-- **statvfs()**
-- **Makefile**
-- **WSL2 / Ubuntu**
-- **Git & GitHub**
+The kernel module provides:
 
----
+- Total RAM
+- Free RAM
+- CPU usage
+- Total processes
+- Running processes
+- Sleeping processes
 
-## Project Structure
+The information is exposed through:
 
 ```text
-LinuxSystemMonitor/
-│
-├── include/
-│   ├── SystemMonitor.h
-│   ├── Process.h
-│   ├── ProcessManager.h
-│   ├── DiskMonitor.h
-│   ├── NetworkMonitor.h
-│   └── UI.h
-│
-├── src/
-│   ├── main.cpp
-│   ├── SystemMonitor.cpp
-│   ├── Process.cpp
-│   ├── ProcessManager.cpp
-│   ├── DiskMonitor.cpp
-│   ├── NetworkMonitor.cpp
-│   └── UI.cpp
-│
-├── Makefile
-├── README.md
-└── .gitignore
+/proc/resource_monitor
