@@ -1,0 +1,306 @@
+#include "UI.h"
+#include "ProcessManager.h"
+
+#include <ncurses.h>
+#include <algorithm>
+
+void UI::start(
+    SystemMonitor& system,
+    DiskMonitor& diskMonitor,
+    NetworkMonitor& networkMonitor,
+    std::vector<Process>& processes) {
+
+    initscr();
+
+    cbreak();
+    noecho();
+    curs_set(0);
+    keypad(stdscr, TRUE);
+
+    timeout(500);
+
+    start_color();
+
+    init_pair(1, COLOR_CYAN, COLOR_BLACK);
+    init_pair(2, COLOR_GREEN, COLOR_BLACK);
+    init_pair(3, COLOR_YELLOW, COLOR_BLACK);
+    init_pair(4, COLOR_RED, COLOR_BLACK);
+
+    bool running = true;
+    bool sortCPU = true;
+
+    ProcessManager manager;
+
+    while (running) {
+
+        clear();
+
+        int height;
+        int width;
+
+        getmaxyx(stdscr, height, width);
+
+        // -----------------------------
+        // Process information
+        // -----------------------------
+
+        processes = manager.getProcesses();
+
+        if (sortCPU) {
+            manager.sortByCPU(processes);
+        }
+        else {
+            manager.sortByMemory(processes);
+        }
+
+        // -----------------------------
+        // System information
+        // -----------------------------
+
+        double cpu =
+            system.getCPUUsage();
+
+        double memory =
+            system.getMemoryUsage();
+
+        double disk =
+            diskMonitor.getDiskUsage();
+
+        double download =
+            networkMonitor.getDownloadSpeed();
+
+        double upload =
+            networkMonitor.getUploadSpeed();
+
+        // -----------------------------
+        // Title
+        // -----------------------------
+
+        attron(COLOR_PAIR(1) | A_BOLD);
+
+        mvprintw(
+            1,
+            std::max(0, (width - 30) / 2),
+            "LINUX SYSTEM MONITOR"
+        );
+
+        attroff(COLOR_PAIR(1) | A_BOLD);
+
+        // -----------------------------
+        // System resources
+        // -----------------------------
+
+        attron(COLOR_PAIR(2));
+
+        mvprintw(
+            3,
+            2,
+            "CPU Usage    : %.2f%%",
+            cpu
+        );
+
+        mvprintw(
+            4,
+            2,
+            "Memory Usage : %.2f%%",
+            memory
+        );
+
+        mvprintw(
+            5,
+            2,
+            "Disk Usage   : %.2f%%",
+            disk
+        );
+
+        attroff(COLOR_PAIR(2));
+
+        // -----------------------------
+        // Network information
+        // -----------------------------
+
+        attron(COLOR_PAIR(3));
+
+        mvprintw(
+            3,
+            35,
+            "Download : %.2f MB",
+            download
+        );
+
+        mvprintw(
+            4,
+            35,
+            "Upload   : %.2f MB",
+            upload
+        );
+
+        mvprintw(
+            5,
+            35,
+            "Processes: %lu",
+            processes.size()
+        );
+
+        attroff(COLOR_PAIR(3));
+
+        // -----------------------------
+        // Sorting mode
+        // -----------------------------
+
+        mvprintw(
+            6,
+            35,
+            "Sorted by: %s",
+            sortCPU ? "CPU" : "MEMORY"
+        );
+
+        // -----------------------------
+        // Table header
+        // -----------------------------
+
+        attron(A_BOLD);
+
+        mvprintw(
+            8,
+            2,
+            "PID"
+        );
+
+        mvprintw(
+            8,
+            12,
+            "PROCESS"
+        );
+
+        mvprintw(
+            8,
+            35,
+            "CPU %%"
+        );
+
+        mvprintw(
+            8,
+            48,
+            "MEMORY MB"
+        );
+
+        attroff(A_BOLD);
+
+        // -----------------------------
+        // Separator
+        // -----------------------------
+
+        if (width > 5) {
+
+            mvhline(
+                9,
+                2,
+                '-',
+                width - 4
+            );
+        }
+
+        // -----------------------------
+        // Process list
+        // -----------------------------
+
+        int row = 10;
+
+        int maxProcesses =
+            height - 15;
+
+        int count = 0;
+
+        for (const Process& process :
+             processes) {
+
+            if (count >= maxProcesses) {
+                break;
+            }
+
+            mvprintw(
+                row,
+                2,
+                "%-8d",
+                process.getPID()
+            );
+
+            mvprintw(
+                row,
+                12,
+                "%-20.20s",
+                process.getName().c_str()
+            );
+
+            mvprintw(
+                row,
+                35,
+                "%8.2f",
+                process.getCPUUsage()
+            );
+
+            mvprintw(
+                row,
+                48,
+                "%10.2f",
+                process.getMemoryUsage()
+            );
+
+            row++;
+            count++;
+        }
+
+        // -----------------------------
+        // Footer
+        // -----------------------------
+
+        attron(COLOR_PAIR(3) | A_BOLD);
+
+        mvprintw(
+            height - 4,
+            2,
+            "[R] Refresh"
+        );
+
+        mvprintw(
+            height - 3,
+            2,
+            "[S] Sort CPU/Memory"
+        );
+
+        mvprintw(
+            height - 2,
+            2,
+            "[Q] Quit"
+        );
+
+        attroff(COLOR_PAIR(3) | A_BOLD);
+
+        refresh();
+
+        // -----------------------------
+        // Keyboard
+        // -----------------------------
+
+        int key = getch();
+
+        if (key == 'q' || key == 'Q') {
+
+            running = false;
+        }
+
+        else if (key == 'r' || key == 'R') {
+
+            processes =
+                manager.getProcesses();
+        }
+
+        else if (key == 's' || key == 'S') {
+
+            sortCPU = !sortCPU;
+        }
+    }
+
+    endwin();
+}

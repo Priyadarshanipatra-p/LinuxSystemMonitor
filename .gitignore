@@ -1,0 +1,17 @@
+# Compiled executable
+monitor
+
+# Keyboard test files
+keytest
+keytest.cpp
+
+# Object files
+*.o
+
+# Build directories
+build/
+
+# CMake generated files
+CMakeFiles/
+CMakeCache.txt
+cmake_install.cmake
