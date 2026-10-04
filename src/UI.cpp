@@ -5,6 +5,7 @@
 #include <algorithm>
 #include <sstream>
 #include <string>
+#include <vector>
 
 void UI::start(
     SystemMonitor& system,
@@ -56,6 +57,9 @@ void UI::start(
 
         double memory =
             system.getMemoryUsage();
+
+        std::vector<double> coreUsage =
+            system.getPerCoreCPUUsage();
 
         double disk =
             diskMonitor.getDiskUsage();
@@ -217,48 +221,105 @@ void UI::start(
         );
 
         /*
-         * Linux Kernel Driver information.
+         * Per-core CPU usage.
          *
-         * The kernel module provides:
-         * Total RAM
-         * Free RAM
-         * CPU Usage
-         * Total Processes
-         * Running Processes
-         * Sleeping Processes
+         * Display up to four cores per row.
          */
         attron(COLOR_PAIR(1) | A_BOLD);
 
         mvprintw(
             6,
             2,
+            "CPU Cores (%lu):",
+            coreUsage.size()
+        );
+
+        attroff(COLOR_PAIR(1) | A_BOLD);
+
+        int coreStartRow = 7;
+
+        for (size_t i = 0;
+             i < coreUsage.size();
+             i++) {
+
+            int column =
+                static_cast<int>(i % 4);
+
+            int row =
+                coreStartRow +
+                static_cast<int>(i / 4);
+
+            int x =
+                2 + column * 15;
+
+            /*
+             * Use red when a core reaches
+             * 80% utilization.
+             */
+            if (coreUsage[i] >= 80.0) {
+
+                attron(COLOR_PAIR(4) | A_BOLD);
+            }
+            else {
+
+                attron(COLOR_PAIR(2));
+            }
+
+            mvprintw(
+                row,
+                x,
+                "Core%-2zu %6.2f%%",
+                i,
+                coreUsage[i]
+            );
+
+            if (coreUsage[i] >= 80.0) {
+
+                attroff(
+                    COLOR_PAIR(4) | A_BOLD
+                );
+            }
+            else {
+
+                attroff(COLOR_PAIR(2));
+            }
+        }
+
+        /*
+         * Linux Kernel Driver information.
+         */
+        int kernelTitleRow = 12;
+
+        attron(COLOR_PAIR(1) | A_BOLD);
+
+        mvprintw(
+            kernelTitleRow,
+            2,
             "Kernel Driver:"
         );
 
         attroff(COLOR_PAIR(1) | A_BOLD);
 
-        int kernelRow = 7;
+        int kernelRow =
+            kernelTitleRow + 1;
 
-        std::istringstream kernelStream(kernelMemory);
+        std::istringstream kernelStream(
+            kernelMemory
+        );
+
         std::string kernelLine;
 
         /*
-         * Display all kernel driver lines.
+         * Display kernel driver information.
          *
-         * The driver currently returns 8 lines:
-         *
-         * 1. Header
-         * 2. Separator
-         * 3. Total RAM
-         * 4. Free RAM
-         * 5. CPU Usage
-         * 6. Total Processes
-         * 7. Running Processes
-         * 8. Sleeping Processes
+         * Keep this section compact so that
+         * the process table remains visible.
          */
-        while (std::getline(kernelStream, kernelLine)) {
+        while (std::getline(
+            kernelStream,
+            kernelLine)) {
 
-            if (kernelRow >= 15) {
+            if (kernelRow >= 21) {
                 break;
             }
 
@@ -275,48 +336,57 @@ void UI::start(
         /*
          * Process table.
          */
+        int processHeaderRow =
+            std::max(22, kernelRow + 1);
+
         attron(A_BOLD);
 
         mvprintw(
-            16,
+            processHeaderRow,
             2,
             "PID"
         );
 
         mvprintw(
-            16,
+            processHeaderRow,
             12,
             "PROCESS"
         );
 
         mvprintw(
-            16,
+            processHeaderRow,
             35,
             "CPU %%"
         );
 
         mvprintw(
-            16,
+            processHeaderRow,
             48,
             "MEMORY MB"
         );
 
         attroff(A_BOLD);
 
-        if (width > 5) {
+        if (width > 5 &&
+            processHeaderRow + 1 < height) {
 
             mvhline(
-                17,
+                processHeaderRow + 1,
                 2,
                 '-',
                 width - 4
             );
         }
 
-        int row = 18;
+        int row =
+            processHeaderRow + 2;
 
         int maxProcesses =
-            height - 23;
+            height - row - 6;
+
+        if (maxProcesses < 0) {
+            maxProcesses = 0;
+        }
 
         int count = 0;
 
