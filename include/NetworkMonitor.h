@@ -2,6 +2,7 @@
 #define NETWORK_MONITOR_H
 
 #include <chrono>
+#include <string>
 
 class NetworkMonitor {
 private:
@@ -15,13 +16,28 @@ private:
 
     bool firstReading;
 
+    std::string interfaceName;
+
+    bool getNetworkBytes(
+        unsigned long long& received,
+        unsigned long long& transmitted
+    );
+
     void updateNetworkSpeed();
 
 public:
-    NetworkMonitor();
+    NetworkMonitor(
+        const std::string& interfaceName = "eth0"
+    );
 
     double getDownloadSpeed();
     double getUploadSpeed();
+
+    std::string getInterfaceName() const;
+
+    bool setInterface(
+        const std::string& newInterface
+    );
 };
 
 #endif

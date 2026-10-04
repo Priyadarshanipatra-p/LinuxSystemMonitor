@@ -2,11 +2,23 @@
 
 #include <fstream>
 #include <sstream>
-#include <string>
 
-static bool getNetworkBytes(
+NetworkMonitor::NetworkMonitor(
+    const std::string& interfaceName
+)
+    : previousReceived(0),
+      previousTransmitted(0),
+      previousTime(std::chrono::steady_clock::now()),
+      downloadSpeed(0.0),
+      uploadSpeed(0.0),
+      firstReading(true),
+      interfaceName(interfaceName) {
+}
+
+bool NetworkMonitor::getNetworkBytes(
     unsigned long long& received,
-    unsigned long long& transmitted) {
+    unsigned long long& transmitted
+) {
 
     std::ifstream file("/proc/net/dev");
 
@@ -14,31 +26,31 @@ static bool getNetworkBytes(
         return false;
     }
 
-    received = 0;
-    transmitted = 0;
-
     std::string line;
 
     while (std::getline(file, line)) {
 
-        if (line.find(':') == std::string::npos) {
+        std::size_t colon =
+            line.find(':');
+
+        if (colon == std::string::npos) {
             continue;
         }
 
-        std::size_t colon = line.find(':');
-
-        std::string interfaceName =
+        std::string currentInterface =
             line.substr(0, colon);
 
         std::size_t first =
-            interfaceName.find_first_not_of(" \t");
+            currentInterface.find_first_not_of(" \t");
 
-        if (first != std::string::npos) {
-            interfaceName =
-                interfaceName.substr(first);
+        if (first == std::string::npos) {
+            continue;
         }
 
-        if (interfaceName == "lo") {
+        currentInterface =
+            currentInterface.substr(first);
+
+        if (currentInterface != interfaceName) {
             continue;
         }
 
@@ -49,30 +61,34 @@ static bool getNetworkBytes(
 
         unsigned long long rxBytes = 0;
         unsigned long long txBytes = 0;
-        unsigned long long value = 0;
 
         ss >> rxBytes;
+
+        /*
+         * Receive fields:
+         * bytes packets errs drop fifo frame
+         * compressed multicast
+         *
+         * Skip the remaining 7 fields.
+         */
+        unsigned long long value = 0;
 
         for (int i = 0; i < 7; i++) {
             ss >> value;
         }
 
+        /*
+         * The next value is transmitted bytes.
+         */
         ss >> txBytes;
 
-        received += rxBytes;
-        transmitted += txBytes;
+        received = rxBytes;
+        transmitted = txBytes;
+
+        return true;
     }
 
-    return true;
-}
-
-NetworkMonitor::NetworkMonitor()
-    : previousReceived(0),
-      previousTransmitted(0),
-      previousTime(std::chrono::steady_clock::now()),
-      downloadSpeed(0.0),
-      uploadSpeed(0.0),
-      firstReading(true) {
+    return false;
 }
 
 void NetworkMonitor::updateNetworkSpeed() {
@@ -80,9 +96,13 @@ void NetworkMonitor::updateNetworkSpeed() {
     unsigned long long received = 0;
     unsigned long long transmitted = 0;
 
-    if (!getNetworkBytes(received, transmitted)) {
+    if (!getNetworkBytes(
+            received,
+            transmitted)) {
+
         downloadSpeed = 0.0;
         uploadSpeed = 0.0;
+
         return;
     }
 
@@ -119,13 +139,19 @@ void NetworkMonitor::updateNetworkSpeed() {
         transmitted - previousTransmitted;
 
     downloadSpeed =
-        (static_cast<double>(receivedDifference) /
-         elapsed) /
+        (
+            static_cast<double>(
+                receivedDifference
+            ) / elapsed
+        ) /
         (1024.0 * 1024.0);
 
     uploadSpeed =
-        (static_cast<double>(transmittedDifference) /
-         elapsed) /
+        (
+            static_cast<double>(
+                transmittedDifference
+            ) / elapsed
+        ) /
         (1024.0 * 1024.0);
 
     previousReceived = received;
@@ -143,4 +169,38 @@ double NetworkMonitor::getDownloadSpeed() {
 double NetworkMonitor::getUploadSpeed() {
 
     return uploadSpeed;
+}
+
+std::string NetworkMonitor::getInterfaceName() const {
+
+    return interfaceName;
+}
+
+bool NetworkMonitor::setInterface(
+    const std::string& newInterface
+) {
+
+    if (newInterface.empty()) {
+        return false;
+    }
+
+    interfaceName = newInterface;
+
+    /*
+     * Reset measurements so that changing
+     * interfaces does not produce an incorrect
+     * speed calculation.
+     */
+    previousReceived = 0;
+    previousTransmitted = 0;
+
+    previousTime =
+        std::chrono::steady_clock::now();
+
+    downloadSpeed = 0.0;
+    uploadSpeed = 0.0;
+
+    firstReading = true;
+
+    return true;
 }
