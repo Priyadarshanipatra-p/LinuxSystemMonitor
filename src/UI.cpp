@@ -397,12 +397,18 @@ void UI::start(
         mvprintw(
             processHeaderRow,
             35,
-            "CPU %%"
+            "STATE"
         );
 
         mvprintw(
             processHeaderRow,
             48,
+            "CPU %%"
+        );
+
+        mvprintw(
+            processHeaderRow,
+            61,
             "MEMORY MB"
         );
 
@@ -459,13 +465,20 @@ void UI::start(
             mvprintw(
                 row,
                 35,
+                "%-12.12s",
+                process.getState().c_str()
+            );
+
+            mvprintw(
+                row,
+                48,
                 "%8.2f",
                 process.getCPUUsage()
             );
 
             mvprintw(
                 row,
-                48,
+                61,
                 "%10.2f",
                 process.getMemoryUsage()
             );

@@ -13,6 +13,7 @@ namespace fs = std::filesystem;
 struct ProcessData {
     int pid;
     std::string name;
+    std::string state;
     long memoryKB;
     long long cpuTime;
 };
@@ -55,12 +56,49 @@ static long long getTotalCPUTime() {
            iowait + irq + softirq + steal;
 }
 
+static std::string convertProcessState(
+    const std::string& stateCode) {
+
+    if (stateCode == "R") {
+        return "Running";
+    }
+
+    if (stateCode == "S") {
+        return "Sleeping";
+    }
+
+    if (stateCode == "D") {
+        return "Waiting";
+    }
+
+    if (stateCode == "T" ||
+        stateCode == "t") {
+        return "Stopped";
+    }
+
+    if (stateCode == "Z") {
+        return "Zombie";
+    }
+
+    if (stateCode == "X" ||
+        stateCode == "x") {
+        return "Dead";
+    }
+
+    if (stateCode == "I") {
+        return "Idle";
+    }
+
+    return "Unknown";
+}
+
 static ProcessData readProcess(int pid) {
 
     ProcessData data;
 
     data.pid = pid;
     data.name = "Unknown";
+    data.state = "Unknown";
     data.memoryKB = 0;
     data.cpuTime = 0;
 
@@ -85,6 +123,7 @@ static ProcessData readProcess(int pid) {
                 data.name.find_first_not_of(" \t");
 
             if (first != std::string::npos) {
+
                 data.name =
                     data.name.substr(first);
             }
@@ -132,14 +171,16 @@ static ProcessData readProcess(int pid) {
             /*
              * After the process name:
              *
-             * Field 1  = state
-             * Field 2  = ppid
+             * Field 3  = state
+             * Field 4  = ppid
              * ...
-             * Field 13 = utime
-             * Field 14 = stime
+             * Field 14 = utime
+             * Field 15 = stime
              *
              * Because we start after the process name,
-             * utime is item 12 and stime is item 13.
+             * state is item 1,
+             * utime is item 12,
+             * stime is item 13.
              */
 
             for (int i = 1; i <= 13; i++) {
@@ -148,14 +189,32 @@ static ProcessData readProcess(int pid) {
                     break;
                 }
 
+                if (i == 1) {
+
+                    data.state =
+                        convertProcessState(field);
+                }
+
                 if (i == 12) {
-                    userTime =
-                        std::stoll(field);
+
+                    try {
+                        userTime =
+                            std::stoll(field);
+                    }
+                    catch (...) {
+                        userTime = 0;
+                    }
                 }
 
                 if (i == 13) {
-                    systemTime =
-                        std::stoll(field);
+
+                    try {
+                        systemTime =
+                            std::stoll(field);
+                    }
+                    catch (...) {
+                        systemTime = 0;
+                    }
                 }
             }
 
@@ -227,10 +286,12 @@ std::vector<Process> ProcessManager::getProcesses() {
         int pid;
 
         try {
+
             pid =
                 std::stoi(directoryName);
         }
         catch (...) {
+
             continue;
         }
 
@@ -259,11 +320,15 @@ std::vector<Process> ProcessManager::getProcesses() {
                 if (processDifference >= 0) {
 
                     cpuUsage =
-                        (static_cast<double>(
-                            processDifference)
-                         /
-                         static_cast<double>(
-                            totalCPUDifference))
+                        (
+                            static_cast<double>(
+                                processDifference
+                            )
+                            /
+                            static_cast<double>(
+                                totalCPUDifference
+                            )
+                        )
                         * 100.0;
                 }
             }
@@ -283,12 +348,13 @@ std::vector<Process> ProcessManager::getProcesses() {
 
         double memoryMB =
             static_cast<double>(
-                data.memoryKB)
-            / 1024.0;
+                data.memoryKB
+            ) / 1024.0;
 
         processes.emplace_back(
             data.pid,
             data.name,
+            data.state,
             memoryMB,
             cpuUsage
         );
@@ -339,3 +405,4 @@ void ProcessManager::sortByMemory(
         }
     );
 }
+

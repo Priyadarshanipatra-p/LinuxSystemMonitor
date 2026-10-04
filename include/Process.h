@@ -7,18 +7,27 @@ class Process {
 private:
     int pid;
     std::string name;
+    std::string state;
     double memoryUsage;
     double cpuUsage;
 
 public:
-    Process(int pid,
-            const std::string& name,
-            double memoryUsage,
-            double cpuUsage);
+    Process(
+        int pid,
+        const std::string& name,
+        const std::string& state,
+        double memoryUsage,
+        double cpuUsage
+    );
 
     int getPID() const;
+
     std::string getName() const;
+
+    std::string getState() const;
+
     double getMemoryUsage() const;
+
     double getCPUUsage() const;
 };
 
