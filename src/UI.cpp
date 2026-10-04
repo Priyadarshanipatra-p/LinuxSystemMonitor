@@ -74,6 +74,18 @@ void UI::start(
 
         attroff(COLOR_PAIR(1) | A_BOLD);
 
+        /*
+         * CPU and Memory status
+         */
+        const char* cpuStatus =
+            cpu >= 80.0 ? "[HIGH]" : "[OK]";
+
+        const char* memoryStatus =
+            memory >= 80.0 ? "[HIGH]" : "[OK]";
+
+        /*
+         * Normal CPU and memory values.
+         */
         attron(COLOR_PAIR(2));
 
         mvprintw(
@@ -99,6 +111,67 @@ void UI::start(
 
         attroff(COLOR_PAIR(2));
 
+        /*
+         * Display warnings when CPU or memory
+         * usage becomes high.
+         */
+        if (cpu >= 80.0) {
+
+            attron(COLOR_PAIR(4) | A_BOLD);
+
+            mvprintw(
+                3,
+                23,
+                "%s",
+                cpuStatus
+            );
+
+            attroff(COLOR_PAIR(4) | A_BOLD);
+        }
+        else {
+
+            attron(COLOR_PAIR(2));
+
+            mvprintw(
+                3,
+                23,
+                "%s",
+                cpuStatus
+            );
+
+            attroff(COLOR_PAIR(2));
+        }
+
+        if (memory >= 80.0) {
+
+            attron(COLOR_PAIR(4) | A_BOLD);
+
+            mvprintw(
+                4,
+                23,
+                "%s",
+                memoryStatus
+            );
+
+            attroff(COLOR_PAIR(4) | A_BOLD);
+        }
+        else {
+
+            attron(COLOR_PAIR(2));
+
+            mvprintw(
+                4,
+                23,
+                "%s",
+                memoryStatus
+            );
+
+            attroff(COLOR_PAIR(2));
+        }
+
+        /*
+         * Network information.
+         */
         attron(COLOR_PAIR(3));
 
         mvprintw(
@@ -242,12 +315,16 @@ void UI::start(
         int key = getch();
 
         if (key == 'q' || key == 'Q') {
+
             running = false;
         }
         else if (key == 'r' || key == 'R') {
-            processes = manager.getProcesses();
+
+            processes =
+                manager.getProcesses();
         }
         else if (key == 's' || key == 'S') {
+
             sortCPU = !sortCPU;
         }
     }
