@@ -3,6 +3,8 @@
 
 #include <ncurses.h>
 #include <algorithm>
+#include <sstream>
+#include <string>
 
 void UI::start(
     SystemMonitor& system,
@@ -63,6 +65,13 @@ void UI::start(
 
         double upload =
             networkMonitor.getUploadSpeed();
+
+        /*
+         * Get information from Linux
+         * kernel device driver.
+         */
+        std::string kernelMemory =
+            system.getKernelMemoryInfo();
 
         attron(COLOR_PAIR(1) | A_BOLD);
 
@@ -204,28 +213,65 @@ void UI::start(
             sortCPU ? "CPU" : "MEMORY"
         );
 
+        /*
+         * Linux Kernel Driver information.
+         */
+        attron(COLOR_PAIR(1) | A_BOLD);
+
+        mvprintw(
+            6,
+            2,
+            "Kernel Driver:"
+        );
+
+        attroff(COLOR_PAIR(1) | A_BOLD);
+
+        int kernelRow = 7;
+
+        std::istringstream kernelStream(kernelMemory);
+        std::string kernelLine;
+
+        while (std::getline(kernelStream, kernelLine)) {
+
+            if (kernelRow >= 9) {
+                break;
+            }
+
+            mvprintw(
+                kernelRow,
+                2,
+                "%s",
+                kernelLine.c_str()
+            );
+
+            kernelRow++;
+        }
+
+        /*
+         * Process table.
+         */
         attron(A_BOLD);
 
         mvprintw(
-            8,
+            10,
             2,
             "PID"
         );
 
         mvprintw(
-            8,
+            10,
             12,
             "PROCESS"
         );
 
         mvprintw(
-            8,
+            10,
             35,
             "CPU %%"
         );
 
         mvprintw(
-            8,
+            10,
             48,
             "MEMORY MB"
         );
@@ -235,17 +281,17 @@ void UI::start(
         if (width > 5) {
 
             mvhline(
-                9,
+                11,
                 2,
                 '-',
                 width - 4
             );
         }
 
-        int row = 10;
+        int row = 12;
 
         int maxProcesses =
-            height - 15;
+            height - 17;
 
         int count = 0;
 
@@ -288,6 +334,9 @@ void UI::start(
             count++;
         }
 
+        /*
+         * Keyboard controls.
+         */
         attron(COLOR_PAIR(3) | A_BOLD);
 
         mvprintw(

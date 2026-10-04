@@ -1,6 +1,8 @@
 #ifndef SYSTEM_MONITOR_H
 #define SYSTEM_MONITOR_H
 
+#include <string>
+
 class SystemMonitor {
 private:
     long long previousIdle;
@@ -12,7 +14,8 @@ public:
 
     double getCPUUsage();
     double getMemoryUsage();
+
+    std::string getKernelMemoryInfo();
 };
 
 #endif
-

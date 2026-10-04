@@ -146,3 +146,20 @@ double SystemMonitor::getMemoryUsage() {
     return memoryUsage;
 }
 
+std::string SystemMonitor::getKernelMemoryInfo() {
+
+    std::ifstream file("/proc/resource_monitor");
+
+    if (!file.is_open()) {
+        return "Kernel driver unavailable";
+    }
+
+    std::ostringstream output;
+    std::string line;
+
+    while (std::getline(file, line)) {
+        output << line << '\n';
+    }
+
+    return output.str();
+}
