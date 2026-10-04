@@ -3,15 +3,22 @@
 
 #include <ncurses.h>
 #include <algorithm>
+#include <chrono>
 #include <sstream>
 #include <string>
+#include <thread>
 #include <vector>
 
 void UI::start(
     SystemMonitor& system,
     DiskMonitor& diskMonitor,
     NetworkMonitor& networkMonitor,
-    std::vector<Process>& processes) {
+    std::vector<Process>& processes,
+    int refreshIntervalMilliseconds,
+    double cpuThreshold,
+    double memoryThreshold,
+    double diskThreshold
+) {
 
     initscr();
 
@@ -20,14 +27,35 @@ void UI::start(
     curs_set(0);
     keypad(stdscr, TRUE);
 
-    timeout(500);
+    timeout(
+        refreshIntervalMilliseconds
+    );
 
     start_color();
 
-    init_pair(1, COLOR_CYAN, COLOR_BLACK);
-    init_pair(2, COLOR_GREEN, COLOR_BLACK);
-    init_pair(3, COLOR_YELLOW, COLOR_BLACK);
-    init_pair(4, COLOR_RED, COLOR_BLACK);
+    init_pair(
+        1,
+        COLOR_CYAN,
+        COLOR_BLACK
+    );
+
+    init_pair(
+        2,
+        COLOR_GREEN,
+        COLOR_BLACK
+    );
+
+    init_pair(
+        3,
+        COLOR_YELLOW,
+        COLOR_BLACK
+    );
+
+    init_pair(
+        4,
+        COLOR_RED,
+        COLOR_BLACK
+    );
 
     bool running = true;
     bool sortCPU = true;
@@ -41,15 +69,26 @@ void UI::start(
         int height;
         int width;
 
-        getmaxyx(stdscr, height, width);
+        getmaxyx(
+            stdscr,
+            height,
+            width
+        );
 
-        processes = manager.getProcesses();
+        processes =
+            manager.getProcesses();
 
         if (sortCPU) {
-            manager.sortByCPU(processes);
+
+            manager.sortByCPU(
+                processes
+            );
         }
         else {
-            manager.sortByMemory(processes);
+
+            manager.sortByMemory(
+                processes
+            );
         }
 
         double cpu =
@@ -92,7 +131,10 @@ void UI::start(
 
         mvprintw(
             1,
-            std::max(0, (width - 30) / 2),
+            std::max(
+                0,
+                (width - 30) / 2
+            ),
             "LINUX SYSTEM MONITOR"
         );
 
@@ -101,13 +143,45 @@ void UI::start(
             A_BOLD
         );
 
+        bool cpuHigh =
+            cpu >= cpuThreshold;
+
+        bool memoryHigh =
+            memory >= memoryThreshold;
+
+        bool diskHigh =
+            disk >= diskThreshold;
+
         const char* cpuStatus =
-            cpu >= 80.0 ? "[HIGH]" : "[OK]";
+            cpuHigh
+                ? "[HIGH]"
+                : "[OK]";
 
         const char* memoryStatus =
-            memory >= 80.0 ? "[HIGH]" : "[OK]";
+            memoryHigh
+                ? "[HIGH]"
+                : "[OK]";
 
-        attron(COLOR_PAIR(2));
+        const char* diskStatus =
+            diskHigh
+                ? "[HIGH]"
+                : "[OK]";
+
+        /*
+         * CPU
+         */
+
+        if (cpuHigh) {
+
+            attron(
+                COLOR_PAIR(4) |
+                A_BOLD
+            );
+        }
+        else {
+
+            attron(COLOR_PAIR(2));
+        }
 
         mvprintw(
             3,
@@ -117,6 +191,41 @@ void UI::start(
         );
 
         mvprintw(
+            3,
+            23,
+            "%s",
+            cpuStatus
+        );
+
+        if (cpuHigh) {
+
+            attroff(
+                COLOR_PAIR(4) |
+                A_BOLD
+            );
+        }
+        else {
+
+            attroff(COLOR_PAIR(2));
+        }
+
+        /*
+         * Memory
+         */
+
+        if (memoryHigh) {
+
+            attron(
+                COLOR_PAIR(4) |
+                A_BOLD
+            );
+        }
+        else {
+
+            attron(COLOR_PAIR(2));
+        }
+
+        mvprintw(
             4,
             2,
             "Memory Usage : %.2f%%",
@@ -124,11 +233,71 @@ void UI::start(
         );
 
         mvprintw(
+            4,
+            23,
+            "%s",
+            memoryStatus
+        );
+
+        if (memoryHigh) {
+
+            attroff(
+                COLOR_PAIR(4) |
+                A_BOLD
+            );
+        }
+        else {
+
+            attroff(COLOR_PAIR(2));
+        }
+
+        /*
+         * Disk
+         */
+
+        if (diskHigh) {
+
+            attron(
+                COLOR_PAIR(4) |
+                A_BOLD
+            );
+        }
+        else {
+
+            attron(COLOR_PAIR(2));
+        }
+
+        mvprintw(
             5,
             2,
             "Disk Usage   : %.2f%%",
             disk
         );
+
+        mvprintw(
+            5,
+            23,
+            "%s",
+            diskStatus
+        );
+
+        if (diskHigh) {
+
+            attroff(
+                COLOR_PAIR(4) |
+                A_BOLD
+            );
+        }
+        else {
+
+            attroff(COLOR_PAIR(2));
+        }
+
+        /*
+         * Disk speed
+         */
+
+        attron(COLOR_PAIR(2));
 
         mvprintw(
             6,
@@ -146,71 +315,9 @@ void UI::start(
 
         attroff(COLOR_PAIR(2));
 
-        if (cpu >= 80.0) {
-
-            attron(
-                COLOR_PAIR(4) |
-                A_BOLD
-            );
-
-            mvprintw(
-                3,
-                23,
-                "%s",
-                cpuStatus
-            );
-
-            attroff(
-                COLOR_PAIR(4) |
-                A_BOLD
-            );
-        }
-        else {
-
-            attron(COLOR_PAIR(2));
-
-            mvprintw(
-                3,
-                23,
-                "%s",
-                cpuStatus
-            );
-
-            attroff(COLOR_PAIR(2));
-        }
-
-        if (memory >= 80.0) {
-
-            attron(
-                COLOR_PAIR(4) |
-                A_BOLD
-            );
-
-            mvprintw(
-                4,
-                23,
-                "%s",
-                memoryStatus
-            );
-
-            attroff(
-                COLOR_PAIR(4) |
-                A_BOLD
-            );
-        }
-        else {
-
-            attron(COLOR_PAIR(2));
-
-            mvprintw(
-                4,
-                23,
-                "%s",
-                memoryStatus
-            );
-
-            attroff(COLOR_PAIR(2));
-        }
+        /*
+         * Network information
+         */
 
         attron(COLOR_PAIR(3));
 
@@ -252,11 +359,25 @@ void UI::start(
         mvprintw(
             8,
             35,
+            "Refresh: %.2fs",
+            refreshIntervalMilliseconds
+                / 1000.0
+        );
+
+        mvprintw(
+            9,
+            35,
             "Sorted by: %s",
-            sortCPU ? "CPU" : "MEMORY"
+            sortCPU
+                ? "CPU"
+                : "MEMORY"
         );
 
         attroff(COLOR_PAIR(3));
+
+        /*
+         * CPU cores
+         */
 
         attron(
             COLOR_PAIR(1) |
@@ -284,16 +405,24 @@ void UI::start(
         ) {
 
             int column =
-                static_cast<int>(i % 4);
+                static_cast<int>(
+                    i % 4
+                );
 
             int row =
                 coreStartRow +
-                static_cast<int>(i / 4);
+                static_cast<int>(
+                    i / 4
+                );
 
             int x =
-                2 + column * 15;
+                2 +
+                column * 15;
 
-            if (coreUsage[i] >= 80.0) {
+            if (
+                coreUsage[i] >=
+                cpuThreshold
+            ) {
 
                 attron(
                     COLOR_PAIR(4) |
@@ -302,7 +431,9 @@ void UI::start(
             }
             else {
 
-                attron(COLOR_PAIR(2));
+                attron(
+                    COLOR_PAIR(2)
+                );
             }
 
             mvprintw(
@@ -313,7 +444,10 @@ void UI::start(
                 coreUsage[i]
             );
 
-            if (coreUsage[i] >= 80.0) {
+            if (
+                coreUsage[i] >=
+                cpuThreshold
+            ) {
 
                 attroff(
                     COLOR_PAIR(4) |
@@ -322,9 +456,15 @@ void UI::start(
             }
             else {
 
-                attroff(COLOR_PAIR(2));
+                attroff(
+                    COLOR_PAIR(2)
+                );
             }
         }
+
+        /*
+         * Kernel driver
+         */
 
         int kernelTitleRow = 16;
 
@@ -373,6 +513,10 @@ void UI::start(
 
             kernelRow++;
         }
+
+        /*
+         * Process table
+         */
 
         int processHeaderRow =
             std::max(
@@ -468,7 +612,9 @@ void UI::start(
             processes
         ) {
 
-            if (count >= maxProcesses) {
+            if (
+                count >= maxProcesses
+            ) {
                 break;
             }
 
@@ -490,21 +636,24 @@ void UI::start(
                 row,
                 17,
                 "%-10.10s",
-                process.getUsername().c_str()
+                process.getUsername()
+                    .c_str()
             );
 
             mvprintw(
                 row,
                 28,
                 "%-20.20s",
-                process.getName().c_str()
+                process.getName()
+                    .c_str()
             );
 
             mvprintw(
                 row,
                 50,
                 "%-12.12s",
-                process.getState().c_str()
+                process.getState()
+                    .c_str()
             );
 
             mvprintw(
@@ -532,12 +681,17 @@ void UI::start(
                 row,
                 88,
                 "%-30.30s",
-                process.getCommandLine().c_str()
+                process.getCommandLine()
+                    .c_str()
             );
 
             row++;
             count++;
         }
+
+        /*
+         * Controls
+         */
 
         attron(
             COLOR_PAIR(3) |
@@ -578,6 +732,7 @@ void UI::start(
 
             running = false;
         }
+
         else if (
             key == 'r' ||
             key == 'R'
@@ -586,6 +741,7 @@ void UI::start(
             processes =
                 manager.getProcesses();
         }
+
         else if (
             key == 's' ||
             key == 'S'
