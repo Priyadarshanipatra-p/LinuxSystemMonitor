@@ -7,6 +7,7 @@ Process::Process(
     const std::string& username,
     const std::string& name,
     const std::string& state,
+    const std::string& commandLine,
     double memoryUsage,
     double cpuUsage
 )
@@ -16,6 +17,7 @@ Process::Process(
       username(username),
       name(name),
       state(state),
+      commandLine(commandLine),
       memoryUsage(memoryUsage),
       cpuUsage(cpuUsage) {
 }
@@ -42,6 +44,10 @@ std::string Process::getName() const {
 
 std::string Process::getState() const {
     return state;
+}
+
+std::string Process::getCommandLine() const {
+    return commandLine;
 }
 
 double Process::getMemoryUsage() const {

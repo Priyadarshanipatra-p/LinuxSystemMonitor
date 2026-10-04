@@ -390,44 +390,50 @@ void UI::start(
 
         mvprintw(
             processHeaderRow,
-            10,
+            9,
             "PPID"
         );
 
         mvprintw(
             processHeaderRow,
-            19,
+            17,
             "USER"
         );
 
         mvprintw(
             processHeaderRow,
-            30,
+            28,
             "PROCESS"
         );
 
         mvprintw(
             processHeaderRow,
-            52,
+            50,
             "STATE"
         );
 
         mvprintw(
             processHeaderRow,
-            65,
+            63,
             "THREADS"
         );
 
         mvprintw(
             processHeaderRow,
-            75,
+            73,
             "CPU %"
         );
 
         mvprintw(
             processHeaderRow,
-            84,
-            "MEMORY MB"
+            81,
+            "MEM"
+        );
+
+        mvprintw(
+            processHeaderRow,
+            88,
+            "COMMAND"
         );
 
         attroff(A_BOLD);
@@ -475,51 +481,58 @@ void UI::start(
 
             mvprintw(
                 row,
-                10,
+                9,
                 "%-7d",
                 process.getParentPID()
             );
 
             mvprintw(
                 row,
-                19,
+                17,
                 "%-10.10s",
                 process.getUsername().c_str()
             );
 
             mvprintw(
                 row,
-                30,
+                28,
                 "%-20.20s",
                 process.getName().c_str()
             );
 
             mvprintw(
                 row,
-                52,
+                50,
                 "%-12.12s",
                 process.getState().c_str()
             );
 
             mvprintw(
                 row,
-                65,
+                63,
                 "%7d",
                 process.getThreadCount()
             );
 
             mvprintw(
                 row,
-                75,
+                73,
                 "%7.2f",
                 process.getCPUUsage()
             );
 
             mvprintw(
                 row,
-                84,
-                "%10.2f",
+                81,
+                "%6.2f",
                 process.getMemoryUsage()
+            );
+
+            mvprintw(
+                row,
+                88,
+                "%-30.30s",
+                process.getCommandLine().c_str()
             );
 
             row++;

@@ -18,6 +18,7 @@ struct ProcessData {
     std::string username;
     std::string name;
     std::string state;
+    std::string commandLine;
 
     long memoryKB;
     long long cpuTime;
@@ -110,6 +111,60 @@ static std::string convertProcessState(
     return "Unknown";
 }
 
+static std::string getCommandLine(int pid) {
+
+    std::string path =
+        "/proc/" +
+        std::to_string(pid) +
+        "/cmdline";
+
+    std::ifstream file(path);
+
+    if (!file.is_open()) {
+        return "Unknown";
+    }
+
+    std::string command;
+
+    std::getline(
+        file,
+        command,
+        '\0'
+    );
+
+    if (command.empty()) {
+        return "Unknown";
+    }
+
+    /*
+     * /proc/<PID>/cmdline stores
+     * command-line arguments separated
+     * by null characters.
+     *
+     * Convert them to spaces so they
+     * can be displayed normally.
+     */
+
+    std::string remaining;
+
+    while (
+        std::getline(
+            file,
+            remaining,
+            '\0'
+        )
+    ) {
+
+        if (!remaining.empty()) {
+
+            command += " ";
+            command += remaining;
+        }
+    }
+
+    return command;
+}
+
 static ProcessData readProcess(int pid) {
 
     ProcessData data;
@@ -121,12 +176,15 @@ static ProcessData readProcess(int pid) {
     data.username = "Unknown";
     data.name = "Unknown";
     data.state = "Unknown";
+    data.commandLine = "Unknown";
 
     data.memoryKB = 0;
     data.cpuTime = 0;
 
     std::string statusPath =
-        "/proc/" + std::to_string(pid) + "/status";
+        "/proc/" +
+        std::to_string(pid) +
+        "/status";
 
     std::ifstream statusFile(statusPath);
 
@@ -140,12 +198,18 @@ static ProcessData readProcess(int pid) {
 
         if (line.rfind("Name:", 0) == 0) {
 
-            data.name = line.substr(5);
+            data.name =
+                line.substr(5);
 
             size_t first =
-                data.name.find_first_not_of(" \t");
+                data.name.find_first_not_of(
+                    " \t"
+                );
 
-            if (first != std::string::npos) {
+            if (
+                first !=
+                std::string::npos
+            ) {
 
                 data.name =
                     data.name.substr(first);
@@ -188,8 +252,13 @@ static ProcessData readProcess(int pid) {
         }
     }
 
+    data.commandLine =
+        getCommandLine(pid);
+
     std::string statPath =
-        "/proc/" + std::to_string(pid) + "/stat";
+        "/proc/" +
+        std::to_string(pid) +
+        "/stat";
 
     std::ifstream statFile(statPath);
 
@@ -197,17 +266,27 @@ static ProcessData readProcess(int pid) {
 
         std::string statLine;
 
-        std::getline(statFile, statLine);
+        std::getline(
+            statFile,
+            statLine
+        );
 
         size_t closeParen =
             statLine.rfind(')');
 
-        if (closeParen != std::string::npos) {
+        if (
+            closeParen !=
+            std::string::npos
+        ) {
 
             std::string remaining =
-                statLine.substr(closeParen + 2);
+                statLine.substr(
+                    closeParen + 2
+                );
 
-            std::istringstream iss(remaining);
+            std::istringstream iss(
+                remaining
+            );
 
             std::string field;
 
@@ -223,13 +302,18 @@ static ProcessData readProcess(int pid) {
              * Field 15 = stime
              *
              * Because we start after field 2:
-             * state is item 1,
-             * parent PID is item 2,
-             * utime is item 12,
-             * stime is item 13.
+             *
+             * state is item 1
+             * parent PID is item 2
+             * utime is item 12
+             * stime is item 13
              */
 
-            for (int i = 1; i <= 13; i++) {
+            for (
+                int i = 1;
+                i <= 13;
+                i++
+            ) {
 
                 if (!(iss >> field)) {
                     break;
@@ -238,16 +322,20 @@ static ProcessData readProcess(int pid) {
                 if (i == 1) {
 
                     data.state =
-                        convertProcessState(field);
+                        convertProcessState(
+                            field
+                        );
                 }
 
                 if (i == 2) {
 
                     try {
+
                         data.parentPID =
                             std::stoi(field);
                     }
                     catch (...) {
+
                         data.parentPID = 0;
                     }
                 }
@@ -255,10 +343,12 @@ static ProcessData readProcess(int pid) {
                 if (i == 12) {
 
                     try {
+
                         userTime =
                             std::stoll(field);
                     }
                     catch (...) {
+
                         userTime = 0;
                     }
                 }
@@ -266,29 +356,35 @@ static ProcessData readProcess(int pid) {
                 if (i == 13) {
 
                     try {
+
                         systemTime =
                             std::stoll(field);
                     }
                     catch (...) {
+
                         systemTime = 0;
                     }
                 }
             }
 
             data.cpuTime =
-                userTime + systemTime;
+                userTime +
+                systemTime;
         }
     }
 
     return data;
 }
 
-std::vector<Process> ProcessManager::getProcesses() {
+std::vector<Process>
+ProcessManager::getProcesses() {
 
     std::vector<Process> processes;
 
-    static std::unordered_map<int, long long>
-        previousProcessTimes;
+    static std::unordered_map<
+        int,
+        long long
+    > previousProcessTimes;
 
     static long long previousTotalCPU = 0;
 
@@ -300,24 +396,32 @@ std::vector<Process> ProcessManager::getProcesses() {
     }
 
     long long totalCPUDifference =
-        currentTotalCPU - previousTotalCPU;
+        currentTotalCPU -
+        previousTotalCPU;
 
     bool firstReading =
         previousTotalCPU == 0;
 
-    for (const auto& entry :
-         fs::directory_iterator("/proc")) {
+    for (
+        const auto& entry :
+        fs::directory_iterator("/proc")
+    ) {
 
         if (!entry.is_directory()) {
             continue;
         }
 
         std::string directoryName =
-            entry.path().filename().string();
+            entry.path()
+                .filename()
+                .string();
 
-        if (directoryName.empty() ||
-            directoryName.find_first_not_of("0123456789")
-                != std::string::npos) {
+        if (
+            directoryName.empty() ||
+            directoryName.find_first_not_of(
+                "0123456789"
+            ) != std::string::npos
+        ) {
 
             continue;
         }
@@ -327,7 +431,9 @@ std::vector<Process> ProcessManager::getProcesses() {
         try {
 
             pid =
-                std::stoi(directoryName);
+                std::stoi(
+                    directoryName
+                );
         }
         catch (...) {
 
@@ -339,14 +445,20 @@ std::vector<Process> ProcessManager::getProcesses() {
 
         double cpuUsage = 0.0;
 
-        if (!firstReading &&
-            totalCPUDifference > 0) {
+        if (
+            !firstReading &&
+            totalCPUDifference > 0
+        ) {
 
             auto previous =
-                previousProcessTimes.find(pid);
+                previousProcessTimes.find(
+                    pid
+                );
 
-            if (previous !=
-                previousProcessTimes.end()) {
+            if (
+                previous !=
+                previousProcessTimes.end()
+            ) {
 
                 long long processDifference =
                     data.cpuTime -
@@ -389,6 +501,7 @@ std::vector<Process> ProcessManager::getProcesses() {
             data.username,
             data.name,
             data.state,
+            data.commandLine,
             memoryMB,
             cpuUsage
         );
