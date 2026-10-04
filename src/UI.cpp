@@ -52,11 +52,8 @@ void UI::start(
             manager.sortByMemory(processes);
         }
 
-        double cpu =
-            system.getCPUUsage();
-
-        double memory =
-            system.getMemoryUsage();
+        double cpu = system.getCPUUsage();
+        double memory = system.getMemoryUsage();
 
         std::vector<double> coreUsage =
             system.getPerCoreCPUUsage();
@@ -64,22 +61,21 @@ void UI::start(
         double disk =
             diskMonitor.getDiskUsage();
 
+        double diskRead =
+            diskMonitor.getReadSpeed();
+
+        double diskWrite =
+            diskMonitor.getWriteSpeed();
+
         double download =
             networkMonitor.getDownloadSpeed();
 
         double upload =
             networkMonitor.getUploadSpeed();
 
-        /*
-         * Get information from Linux
-         * kernel device driver.
-         */
         std::string kernelMemory =
             system.getKernelResourceInfo();
 
-        /*
-         * Application title.
-         */
         attron(COLOR_PAIR(1) | A_BOLD);
 
         mvprintw(
@@ -90,18 +86,12 @@ void UI::start(
 
         attroff(COLOR_PAIR(1) | A_BOLD);
 
-        /*
-         * CPU and Memory status.
-         */
         const char* cpuStatus =
             cpu >= 80.0 ? "[HIGH]" : "[OK]";
 
         const char* memoryStatus =
             memory >= 80.0 ? "[HIGH]" : "[OK]";
 
-        /*
-         * Normal CPU and memory values.
-         */
         attron(COLOR_PAIR(2));
 
         mvprintw(
@@ -125,12 +115,22 @@ void UI::start(
             disk
         );
 
+        mvprintw(
+            6,
+            2,
+            "Disk Read    : %.2f MB/s",
+            diskRead
+        );
+
+        mvprintw(
+            7,
+            2,
+            "Disk Write   : %.2f MB/s",
+            diskWrite
+        );
+
         attroff(COLOR_PAIR(2));
 
-        /*
-         * Display warnings when CPU or memory
-         * usage becomes high.
-         */
         if (cpu >= 80.0) {
 
             attron(COLOR_PAIR(4) | A_BOLD);
@@ -185,9 +185,6 @@ void UI::start(
             attroff(COLOR_PAIR(2));
         }
 
-        /*
-         * Network information.
-         */
         attron(COLOR_PAIR(3));
 
         mvprintw(
@@ -220,15 +217,10 @@ void UI::start(
             sortCPU ? "CPU" : "MEMORY"
         );
 
-        /*
-         * Per-core CPU usage.
-         *
-         * Display up to four cores per row.
-         */
         attron(COLOR_PAIR(1) | A_BOLD);
 
         mvprintw(
-            6,
+            9,
             2,
             "CPU Cores (%lu):",
             coreUsage.size()
@@ -236,7 +228,7 @@ void UI::start(
 
         attroff(COLOR_PAIR(1) | A_BOLD);
 
-        int coreStartRow = 7;
+        int coreStartRow = 10;
 
         for (size_t i = 0;
              i < coreUsage.size();
@@ -252,13 +244,12 @@ void UI::start(
             int x =
                 2 + column * 15;
 
-            /*
-             * Use red when a core reaches
-             * 80% utilization.
-             */
             if (coreUsage[i] >= 80.0) {
 
-                attron(COLOR_PAIR(4) | A_BOLD);
+                attron(
+                    COLOR_PAIR(4) |
+                    A_BOLD
+                );
             }
             else {
 
@@ -276,7 +267,8 @@ void UI::start(
             if (coreUsage[i] >= 80.0) {
 
                 attroff(
-                    COLOR_PAIR(4) | A_BOLD
+                    COLOR_PAIR(4) |
+                    A_BOLD
                 );
             }
             else {
@@ -285,10 +277,7 @@ void UI::start(
             }
         }
 
-        /*
-         * Linux Kernel Driver information.
-         */
-        int kernelTitleRow = 12;
+        int kernelTitleRow = 15;
 
         attron(COLOR_PAIR(1) | A_BOLD);
 
@@ -309,17 +298,14 @@ void UI::start(
 
         std::string kernelLine;
 
-        /*
-         * Display kernel driver information.
-         *
-         * Keep this section compact so that
-         * the process table remains visible.
-         */
-        while (std::getline(
-            kernelStream,
-            kernelLine)) {
+        while (
+            std::getline(
+                kernelStream,
+                kernelLine
+            )
+        ) {
 
-            if (kernelRow >= 21) {
+            if (kernelRow >= 24) {
                 break;
             }
 
@@ -333,11 +319,11 @@ void UI::start(
             kernelRow++;
         }
 
-        /*
-         * Process table.
-         */
         int processHeaderRow =
-            std::max(22, kernelRow + 1);
+            std::max(
+                25,
+                kernelRow + 1
+            );
 
         attron(A_BOLD);
 
@@ -367,8 +353,10 @@ void UI::start(
 
         attroff(A_BOLD);
 
-        if (width > 5 &&
-            processHeaderRow + 1 < height) {
+        if (
+            width > 5 &&
+            processHeaderRow + 1 < height
+        ) {
 
             mvhline(
                 processHeaderRow + 1,
@@ -390,8 +378,10 @@ void UI::start(
 
         int count = 0;
 
-        for (const Process& process :
-             processes) {
+        for (
+            const Process& process :
+            processes
+        ) {
 
             if (count >= maxProcesses) {
                 break;
@@ -429,10 +419,10 @@ void UI::start(
             count++;
         }
 
-        /*
-         * Keyboard controls.
-         */
-        attron(COLOR_PAIR(3) | A_BOLD);
+        attron(
+            COLOR_PAIR(3) |
+            A_BOLD
+        );
 
         mvprintw(
             height - 4,
@@ -452,7 +442,10 @@ void UI::start(
             "[Q] Quit"
         );
 
-        attroff(COLOR_PAIR(3) | A_BOLD);
+        attroff(
+            COLOR_PAIR(3) |
+            A_BOLD
+        );
 
         refresh();
 
@@ -462,12 +455,18 @@ void UI::start(
 
             running = false;
         }
-        else if (key == 'r' || key == 'R') {
+        else if (
+            key == 'r' ||
+            key == 'R'
+        ) {
 
             processes =
                 manager.getProcesses();
         }
-        else if (key == 's' || key == 'S') {
+        else if (
+            key == 's' ||
+            key == 'S'
+        ) {
 
             sortCPU = !sortCPU;
         }
