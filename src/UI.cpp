@@ -40,10 +40,6 @@ void UI::start(
 
         getmaxyx(stdscr, height, width);
 
-        // -----------------------------
-        // Process information
-        // -----------------------------
-
         processes = manager.getProcesses();
 
         if (sortCPU) {
@@ -52,10 +48,6 @@ void UI::start(
         else {
             manager.sortByMemory(processes);
         }
-
-        // -----------------------------
-        // System information
-        // -----------------------------
 
         double cpu =
             system.getCPUUsage();
@@ -72,10 +64,6 @@ void UI::start(
         double upload =
             networkMonitor.getUploadSpeed();
 
-        // -----------------------------
-        // Title
-        // -----------------------------
-
         attron(COLOR_PAIR(1) | A_BOLD);
 
         mvprintw(
@@ -85,10 +73,6 @@ void UI::start(
         );
 
         attroff(COLOR_PAIR(1) | A_BOLD);
-
-        // -----------------------------
-        // System resources
-        // -----------------------------
 
         attron(COLOR_PAIR(2));
 
@@ -115,23 +99,19 @@ void UI::start(
 
         attroff(COLOR_PAIR(2));
 
-        // -----------------------------
-        // Network information
-        // -----------------------------
-
         attron(COLOR_PAIR(3));
 
         mvprintw(
             3,
             35,
-            "Download : %.2f MB",
+            "Download : %.2f MB/s",
             download
         );
 
         mvprintw(
             4,
             35,
-            "Upload   : %.2f MB",
+            "Upload   : %.2f MB/s",
             upload
         );
 
@@ -144,20 +124,12 @@ void UI::start(
 
         attroff(COLOR_PAIR(3));
 
-        // -----------------------------
-        // Sorting mode
-        // -----------------------------
-
         mvprintw(
             6,
             35,
             "Sorted by: %s",
             sortCPU ? "CPU" : "MEMORY"
         );
-
-        // -----------------------------
-        // Table header
-        // -----------------------------
 
         attron(A_BOLD);
 
@@ -187,10 +159,6 @@ void UI::start(
 
         attroff(A_BOLD);
 
-        // -----------------------------
-        // Separator
-        // -----------------------------
-
         if (width > 5) {
 
             mvhline(
@@ -200,10 +168,6 @@ void UI::start(
                 width - 4
             );
         }
-
-        // -----------------------------
-        // Process list
-        // -----------------------------
 
         int row = 10;
 
@@ -251,10 +215,6 @@ void UI::start(
             count++;
         }
 
-        // -----------------------------
-        // Footer
-        // -----------------------------
-
         attron(COLOR_PAIR(3) | A_BOLD);
 
         mvprintw(
@@ -279,25 +239,15 @@ void UI::start(
 
         refresh();
 
-        // -----------------------------
-        // Keyboard
-        // -----------------------------
-
         int key = getch();
 
         if (key == 'q' || key == 'Q') {
-
             running = false;
         }
-
         else if (key == 'r' || key == 'R') {
-
-            processes =
-                manager.getProcesses();
+            processes = manager.getProcesses();
         }
-
         else if (key == 's' || key == 'S') {
-
             sortCPU = !sortCPU;
         }
     }

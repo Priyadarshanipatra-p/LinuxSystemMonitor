@@ -4,14 +4,14 @@
 #include <sstream>
 #include <string>
 
-static unsigned long long getNetworkBytes(
+static bool getNetworkBytes(
     unsigned long long& received,
     unsigned long long& transmitted) {
 
     std::ifstream file("/proc/net/dev");
 
     if (!file.is_open()) {
-        return 0;
+        return false;
     }
 
     received = 0;
@@ -25,19 +25,19 @@ static unsigned long long getNetworkBytes(
             continue;
         }
 
-        std::size_t colon =
-            line.find(':');
+        std::size_t colon = line.find(':');
 
         std::string interfaceName =
             line.substr(0, colon);
 
-        // Remove spaces from interface name
-        interfaceName.erase(
-            0,
-            interfaceName.find_first_not_of(" \t")
-        );
+        std::size_t first =
+            interfaceName.find_first_not_of(" \t");
 
-        // Ignore loopback interface
+        if (first != std::string::npos) {
+            interfaceName =
+                interfaceName.substr(first);
+        }
+
         if (interfaceName == "lo") {
             continue;
         }
@@ -49,11 +49,9 @@ static unsigned long long getNetworkBytes(
 
         unsigned long long rxBytes = 0;
         unsigned long long txBytes = 0;
+        unsigned long long value = 0;
 
         ss >> rxBytes;
-
-        // Skip fields between RX bytes and TX bytes
-        unsigned long long value;
 
         for (int i = 0; i < 7; i++) {
             ss >> value;
@@ -65,39 +63,84 @@ static unsigned long long getNetworkBytes(
         transmitted += txBytes;
     }
 
-    return received + transmitted;
+    return true;
+}
+
+NetworkMonitor::NetworkMonitor()
+    : previousReceived(0),
+      previousTransmitted(0),
+      previousTime(std::chrono::steady_clock::now()),
+      downloadSpeed(0.0),
+      uploadSpeed(0.0),
+      firstReading(true) {
+}
+
+void NetworkMonitor::updateNetworkSpeed() {
+
+    unsigned long long received = 0;
+    unsigned long long transmitted = 0;
+
+    if (!getNetworkBytes(received, transmitted)) {
+        downloadSpeed = 0.0;
+        uploadSpeed = 0.0;
+        return;
+    }
+
+    auto currentTime =
+        std::chrono::steady_clock::now();
+
+    if (firstReading) {
+
+        previousReceived = received;
+        previousTransmitted = transmitted;
+        previousTime = currentTime;
+
+        firstReading = false;
+
+        downloadSpeed = 0.0;
+        uploadSpeed = 0.0;
+
+        return;
+    }
+
+    double elapsed =
+        std::chrono::duration<double>(
+            currentTime - previousTime
+        ).count();
+
+    if (elapsed <= 0.0) {
+        return;
+    }
+
+    unsigned long long receivedDifference =
+        received - previousReceived;
+
+    unsigned long long transmittedDifference =
+        transmitted - previousTransmitted;
+
+    downloadSpeed =
+        (static_cast<double>(receivedDifference) /
+         elapsed) /
+        (1024.0 * 1024.0);
+
+    uploadSpeed =
+        (static_cast<double>(transmittedDifference) /
+         elapsed) /
+        (1024.0 * 1024.0);
+
+    previousReceived = received;
+    previousTransmitted = transmitted;
+    previousTime = currentTime;
 }
 
 double NetworkMonitor::getDownloadSpeed() {
 
-    unsigned long long received1;
-    unsigned long long transmitted1;
+    updateNetworkSpeed();
 
-    getNetworkBytes(
-        received1,
-        transmitted1
-    );
-
-    // This function currently returns
-    // the total received data in MB.
-
-    return static_cast<double>(received1)
-           / (1024.0 * 1024.0);
+    return downloadSpeed;
 }
 
 double NetworkMonitor::getUploadSpeed() {
 
-    unsigned long long received;
-    unsigned long long transmitted;
-
-    getNetworkBytes(
-        received,
-        transmitted
-    );
-
-    // This function currently returns
-    // the total transmitted data in MB.
-
-    return static_cast<double>(transmitted)
-           / (1024.0 * 1024.0);
+    return uploadSpeed;
 }
