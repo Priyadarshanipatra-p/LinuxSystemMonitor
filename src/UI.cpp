@@ -52,8 +52,11 @@ void UI::start(
             manager.sortByMemory(processes);
         }
 
-        double cpu = system.getCPUUsage();
-        double memory = system.getMemoryUsage();
+        double cpu =
+            system.getCPUUsage();
+
+        double memory =
+            system.getMemoryUsage();
 
         std::vector<double> coreUsage =
             system.getPerCoreCPUUsage();
@@ -73,10 +76,19 @@ void UI::start(
         double upload =
             networkMonitor.getUploadSpeed();
 
+        double packetLoss =
+            networkMonitor.getPacketLoss();
+
+        std::string networkInterface =
+            networkMonitor.getInterfaceName();
+
         std::string kernelMemory =
             system.getKernelResourceInfo();
 
-        attron(COLOR_PAIR(1) | A_BOLD);
+        attron(
+            COLOR_PAIR(1) |
+            A_BOLD
+        );
 
         mvprintw(
             1,
@@ -84,7 +96,10 @@ void UI::start(
             "LINUX SYSTEM MONITOR"
         );
 
-        attroff(COLOR_PAIR(1) | A_BOLD);
+        attroff(
+            COLOR_PAIR(1) |
+            A_BOLD
+        );
 
         const char* cpuStatus =
             cpu >= 80.0 ? "[HIGH]" : "[OK]";
@@ -133,7 +148,10 @@ void UI::start(
 
         if (cpu >= 80.0) {
 
-            attron(COLOR_PAIR(4) | A_BOLD);
+            attron(
+                COLOR_PAIR(4) |
+                A_BOLD
+            );
 
             mvprintw(
                 3,
@@ -142,7 +160,10 @@ void UI::start(
                 cpuStatus
             );
 
-            attroff(COLOR_PAIR(4) | A_BOLD);
+            attroff(
+                COLOR_PAIR(4) |
+                A_BOLD
+            );
         }
         else {
 
@@ -160,7 +181,10 @@ void UI::start(
 
         if (memory >= 80.0) {
 
-            attron(COLOR_PAIR(4) | A_BOLD);
+            attron(
+                COLOR_PAIR(4) |
+                A_BOLD
+            );
 
             mvprintw(
                 4,
@@ -169,7 +193,10 @@ void UI::start(
                 memoryStatus
             );
 
-            attroff(COLOR_PAIR(4) | A_BOLD);
+            attroff(
+                COLOR_PAIR(4) |
+                A_BOLD
+            );
         }
         else {
 
@@ -204,35 +231,57 @@ void UI::start(
         mvprintw(
             5,
             35,
+            "Interface: %s",
+            networkInterface.c_str()
+        );
+
+        mvprintw(
+            6,
+            35,
+            "Packet Loss: %.2f%%",
+            packetLoss
+        );
+
+        mvprintw(
+            7,
+            35,
             "Processes: %lu",
             processes.size()
         );
 
-        attroff(COLOR_PAIR(3));
-
         mvprintw(
-            6,
+            8,
             35,
             "Sorted by: %s",
             sortCPU ? "CPU" : "MEMORY"
         );
 
-        attron(COLOR_PAIR(1) | A_BOLD);
+        attroff(COLOR_PAIR(3));
+
+        attron(
+            COLOR_PAIR(1) |
+            A_BOLD
+        );
 
         mvprintw(
-            9,
+            10,
             2,
             "CPU Cores (%lu):",
             coreUsage.size()
         );
 
-        attroff(COLOR_PAIR(1) | A_BOLD);
+        attroff(
+            COLOR_PAIR(1) |
+            A_BOLD
+        );
 
-        int coreStartRow = 10;
+        int coreStartRow = 11;
 
-        for (size_t i = 0;
-             i < coreUsage.size();
-             i++) {
+        for (
+            size_t i = 0;
+            i < coreUsage.size();
+            i++
+        ) {
 
             int column =
                 static_cast<int>(i % 4);
@@ -277,9 +326,12 @@ void UI::start(
             }
         }
 
-        int kernelTitleRow = 15;
+        int kernelTitleRow = 16;
 
-        attron(COLOR_PAIR(1) | A_BOLD);
+        attron(
+            COLOR_PAIR(1) |
+            A_BOLD
+        );
 
         mvprintw(
             kernelTitleRow,
@@ -287,7 +339,10 @@ void UI::start(
             "Kernel Driver:"
         );
 
-        attroff(COLOR_PAIR(1) | A_BOLD);
+        attroff(
+            COLOR_PAIR(1) |
+            A_BOLD
+        );
 
         int kernelRow =
             kernelTitleRow + 1;
@@ -305,7 +360,7 @@ void UI::start(
             )
         ) {
 
-            if (kernelRow >= 24) {
+            if (kernelRow >= 25) {
                 break;
             }
 
@@ -321,7 +376,7 @@ void UI::start(
 
         int processHeaderRow =
             std::max(
-                25,
+                26,
                 kernelRow + 1
             );
 
@@ -451,7 +506,10 @@ void UI::start(
 
         int key = getch();
 
-        if (key == 'q' || key == 'Q') {
+        if (
+            key == 'q' ||
+            key == 'Q'
+        ) {
 
             running = false;
         }
