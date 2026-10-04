@@ -71,7 +71,7 @@ void UI::start(
          * kernel device driver.
          */
         std::string kernelMemory =
-            system.getKernelMemoryInfo();
+            system.getKernelResourceInfo();
 
         attron(COLOR_PAIR(1) | A_BOLD);
 

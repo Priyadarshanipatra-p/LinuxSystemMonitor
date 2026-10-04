@@ -15,7 +15,7 @@ public:
     double getCPUUsage();
     double getMemoryUsage();
 
-    std::string getKernelMemoryInfo();
+    std::string getKernelResourceInfo();
 };
 
 #endif
